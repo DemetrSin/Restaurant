@@ -1,0 +1,32 @@
+{
+  "Caesar Wrap": {
+    "price": 10.99,
+    "weight": "300g",
+    "composition": "Grilled chicken, romaine lettuce, Caesar dressing, wrapped in a tortilla"
+  },
+  "Spaghetti Bolognese": {
+    "price": 12.99,
+    "weight": "300g",
+    "composition": "Spaghetti, Bolognese sauce, ground beef, tomatoes"
+  },
+  "Chicken Caesar Salad": {
+    "price": 9.99,
+    "weight": "250g",
+    "composition": "Grilled chicken, romaine lettuce, croutons, Caesar dressing"
+  },
+  "Margherita Pizza": {
+    "price": 14.99,
+    "weight": "400g",
+    "composition": "Tomato sauce, mozzarella cheese, basil"
+  },
+  "Beef Steak": {
+    "price": 19.99,
+    "weight": "350g",
+    "composition": "Grilled beef steak, mashed potatoes, saut\u00e9ed vegetables"
+  },
+  "Chocolate Fondant": {
+    "price": 7.99,
+    "weight": "200g",
+    "composition": "Chocolate cake, molten chocolate center, vanilla ice cream"
+  }
+}
