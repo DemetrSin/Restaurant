@@ -24,8 +24,8 @@ class Restaurant:
     def show_menu(self):
         try:
             with shelve.open('data/menu') as menu:
-                for item_name, item_value in menu.items():
-                    print(f"{item_name}: {', '.join([f'{key}:{value}' for key, value in item_value.items()])}")
+                for i, (item_name, item_value) in enumerate(menu.items(), start=1):
+                    print(f"{i}. {item_name}: {', '.join([f'{key}:{value}' for key, value in item_value.items()])}")
         except:
             print("Sorry, something went wrong, try again later")
 
@@ -61,21 +61,54 @@ class Customer(Restaurant):
 
     def __init__(self, customer_name, people):
         self.customer_name = customer_name
+        self.people = people
 
     def make_order(self):
-        self.show_menu()
-        order = str(input("Choose what you want from menu by comma please: "))
-        list_order = order.split(',')
-        total_cost = 0
-        with shelve.open('data/menu') as menu:
-            for dish in menu.items():
-                if dish in menu.items():
-                    total_cost += float(menu[dish[0]]['price'])
-            rounded_cost = round(total_cost, 2)
-            final_order = f"Your order is: \"{', '.join(list_order)}\". Total cost is: {rounded_cost}$"
-            print(final_order)
+        try:
+            self.show_menu()
+            order_input = input("Choose the dishes you want by entering their numbers separated by commas: ")
+            selected_indices = [int(index) for index in order_input.split(',')]
 
+            total_cost = 0
+            selected_dishes = []
 
+            with shelve.open('data/menu') as menu:
+                for index in selected_indices:
+                    if 1 <= index <= len(menu):
+                        item_name = list(menu.keys())[index - 1]
+                        item_price = float(menu[item_name]['price'])
+                        total_cost += item_price
+                        selected_dishes.append(item_name)
+                    else:
+                        raise ValueError("Invalid menu item or wrong input.")
+
+                rounded_cost = round(total_cost, 2)
+                final_order = f"Your order is: \"{', '.join(selected_dishes)}\". Total cost is: {rounded_cost}$"
+                print(final_order)
+                self.save_order(customer_order=final_order)
+
+        except ValueError:
+            print("Sorry but you had wrong input, please try again and enter the correct data.")
+
+    def show_order(self):
+        try:
+            with shelve.open('data/order') as order:
+                if not order:
+                    raise ValueError
+                else:
+                    for customer, details in order.items():
+                        print(f"{customer}, {details}")
+        except Exception:
+            print("Sorry, probably your order was deleted or something went wrong.")
+
+    def save_order(self, customer_order):
+        with shelve.open('data/order') as order:
+            order[self.customer_name] = customer_order
+
+    def delete_order(self):
+        with shelve.open('data/order') as order:
+            if self.customer_name in order:
+                del order[self.customer_name]
 
 
 # r = Restaurant('Avrora')
@@ -90,5 +123,8 @@ class Customer(Restaurant):
 # r.unbook_table(5)
 # r.show_booked_tables()
 
-# c = Customer("Julia", 5)
+c = Customer("Julia", 5)
 # c.make_order()
+# print(c.load_menu())
+# c.delete_order()
+c.show_order()
