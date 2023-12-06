@@ -1,8 +1,10 @@
 import shelve
 from datetime import datetime
+from custom_logger import Logger
 
 CURRENT_TIME = datetime.now()
 FORMATTED_TIME = CURRENT_TIME.strftime("%Y-%m-%d %H:%M")
+CLOSING_TIME = CURRENT_TIME.replace(hour=23, minute=00, second=0, microsecond=0)
 
 
 class NotYetTimeError(Exception):
@@ -12,29 +14,35 @@ class NotYetTimeError(Exception):
 
 class Restaurant:
     """Class Restaurant with methods for simply functions, naming says what exactly method do, else in comments."""
-    def __init__(self, restaurant_name, number_of_tables):
+    def __init__(self, restaurant_name: str, number_of_tables: int):
         """"Class constructor
         Params:
         restaurant_name (str): Just name for restaurant
         number_of_tables (int): Choose how much tables are in restaurant"""
         self.restaurant_name = restaurant_name
         self.number_of_tables = number_of_tables
-        self.table = []
 
-    def add_menu_item(self, item_name, item_details):
+    def add_menu_item(self, item_name: str, item_details: dict):
         """Important! Method contain DICT.
         Params:
-        item_name (str): Name of the dish to add.
-        item_details(dict): Nested DICT with details of dish. See examples in Comment with method call at the code bottom"""
+            item_name (str): Name of the dish to add.
+            item_details(dict): Nested DICT with details of dish. See examples in Comment with method call at the code bottom
+        Raises:
+            Exception: if item_details isn't DICT"""
         try:
             with shelve.open('data/menu') as menu:
-                menu[item_name] = item_details
-        except Exception:
-            print("Sorry, try to contact the developer for more info.")
+                if isinstance(item_name, str) and isinstance(item_details, dict):
+                    menu[item_name] = item_details
+                    print(f"The item:{item_name} with details {item_details} was successfully added.")
+                else:
+                    raise Exception
+        except Exception as e:
+            print("Please, make sure that you use DICT format for item_details.")
+            Logger(level='warning', msg="Need to check out what's wrong with add_menu_item.").create_log()
 
-    def delete_menu_item(self, menu_item):
+    def delete_menu_item(self, menu_item: str):
         """Params:
-        menu_item (str): Name of the dish to delete from dict"""
+            menu_item (str): Name of the dish to delete from dict"""
         with shelve.open('data/menu') as menu:
             if menu_item in menu:
                 del menu[menu_item]
@@ -50,6 +58,7 @@ class Restaurant:
                     print(f"{i}. {item_name}: {', '.join([f'{key}:{value}' for key, value in item_value.items()])}")
         except Exception:
             print("Sorry, something went wrong, try again later")
+            Logger(level='error', msg="Method show menu didn't do his job, check out")
 
     def book_table(self):
         """Method for booking table and add datetime.now() to it, using DICT, and INPUT for choosing table. There are using checks if table in accessible range and Exception if Input was wrong"""
@@ -65,24 +74,20 @@ class Restaurant:
                     tables[table_number] = reservation_time
                     print(f"Table {table_number} successfully booked at {reservation_time}.")
         except ValueError:
-            print(f"Invalid input. Please enter a valid table number.")
+            print(f"Invalid input. Please, try again and enter a valid table number.")
 
     def show_booked_tables(self):
         """Method for show whole booked tables, if tables DICT is empty raising ValueError and it's being processed by Exception"""
-        try:
-            with shelve.open('data/tables') as tables:
-                if tables:
-                    for table, time in tables.items():
-                        print(f"Table: {table} was reserved at: {time}")
-                else:
-                    raise ValueError
-        except Exception:
-            print("Whole tables are free now")
+        with shelve.open('data/tables') as tables:
+            if tables:
+                for table, time in tables.items():
+                    print(f"Table: {table} was reserved at: {time}")
+            else:
+                print("Whole tables are free now")
 
-
-    def unbook_table(self, table):
+    def unbook_table(self, table: int):
         """Params:
-         table (int): number of table need to unbook it treats by str() for comfort """
+            table (int): number of table need to unbook it treats by str() for comfort """
         with shelve.open('data/tables', writeback=True) as tables:
             if str(table) in tables:
                 del tables[str(table)]
@@ -90,10 +95,12 @@ class Restaurant:
             else:
                 print(f"Table {table} is not currently booked.")
 
-    def close_restaurant(self, closing_time):
+    def close_restaurant(self, closing_time: datetime):
         """Method for close restaurant and clear tables and orders data, if not time utilize raise custom Error and treat it by Exception
         Params:
-        closing_time(datetime): IMPORTANT! Has to be like that 'datetime.strptime("23:59", "%H:%M")' """
+            closing_time(datetime): IMPORTANT! Has to be like that CLOSING_TIME constant
+        Raises:
+            NotYetTimeError: if it's not time for close"""
         try:
             if CURRENT_TIME > closing_time:
                 with shelve.open('data/tables', writeback=True) as tables:
@@ -111,16 +118,17 @@ class Restaurant:
 class Customer(Restaurant):
     """Class Customer for making order and saving its orders"""
 
-    def __init__(self, customer_name, people):
+    def __init__(self, customer_name: str):
         """Class constructor
         Params:
-        customer_name (str): Just customer name
-        people (int): Choosing for how many people will be"""
+            customer_name (str): Just customer name"""
         self.customer_name = customer_name
-        self.people = people
 
     def make_order(self):
-        """Method for make order comfortable. Accepts dish numbering by INPUT and keep it in LIST variable, then looking for by indexes in menu and count their cost add dishes to another LIST variable, finally print the result."""
+        """Method for make order comfortable. Accepts dish numbering by INPUT and keep it in LIST variable, then looking for by indexes in menu and count their cost add dishes to another LIST variable, finally print the result.
+        Raises:
+            ValueError: If invalid menu item or wrong input"""
+
         try:
             self.show_menu()
             order_input = input("Choose the dishes you want by entering their numbers separated by commas: ")
@@ -149,7 +157,9 @@ class Customer(Restaurant):
             print("Sorry but you had wrong input, please try again and enter the correct data.")
 
     def show_order(self):
-        """Method for showing order if order DICT is empty raising ValueError and treat it by Exception"""
+        """Method for showing order if order DICT is empty raising ValueError and treat it by Exception
+        Raises:
+            ValueError: if data order is empty"""
         try:
             with shelve.open('data/order') as order:
                 if not order:
@@ -162,8 +172,11 @@ class Customer(Restaurant):
         except Exception:
             print("Sorry, probably your order was deleted or something went wrong.")
 
-    def save_order(self, customer_order, time):
-        """Method for saving customer order into DICT"""
+    def save_order(self, customer_order: str, time: str):
+        """Method for saving customer order into DICT
+        Params:
+            customer_order (str): accepts order from make_order method
+            time (str): basically it accepts FORMATTED_TIME constant"""
         with shelve.open('data/order') as order:
             order[self.customer_name] = {"order_details": customer_order, "order_time": time}
 
@@ -172,23 +185,30 @@ class Customer(Restaurant):
         with shelve.open('data/order') as order:
             if self.customer_name in order:
                 del order[self.customer_name]
+                print(f"Order for {self.customer_name} was successfully deleted")
+            else:
+                print(f"There is no order to delete for {self.customer_name}")
 
-closing_time = datetime.strptime("23:59", "%H:%M")
-r = Restaurant('Avrora', 20)
-r.close_restaurant(closing_time)
-# r.book_table()
-# r.add_menu_item("Chocolate Fondant", {
-#     "price": 7.99,
-#     "weight": "200g",
-#     "composition": "Chocolate cake, molten chocolate center, vanilla ice cream"
-#   })
-# r.show_menu()
-# r.delete_menu_item("Chocolate Fondant")
-# r.unbook_table(6)
-# r.show_booked_tables()
+def test_restaurant_class_logic():
+    r = Restaurant('Avrora', 20)
+    r.show_menu()
+    r.add_menu_item("Chocolate Fondant", {
+        "price": 7.99,
+        "weight": "200g",
+        "composition": "Chocolate cake, molten chocolate center, vanilla ice cream"
+      })
+    r.delete_menu_item("Chocolate Fondant")
+    r.book_table()
+    r.show_booked_tables()
+    r.unbook_table(6)
+    r.close_restaurant(CLOSING_TIME)
 
-# c = Customer("Julia", 5)
-# c.make_order()
-# print(c.load_menu())
-# c.delete_order()
-# c.show_order()
+
+def test_customer__class_logic():
+    c = Customer("Julia")
+    c.make_order()
+    c.show_order()
+    c.delete_order()
+
+# test_restaurant_class_logic()
+# test_customer__class_logic()
